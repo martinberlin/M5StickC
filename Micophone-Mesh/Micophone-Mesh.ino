@@ -1,5 +1,11 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
 #include <M5StickC.h>
 #include <driver/i2s.h>
+//#include <Connect.cpp>  
+// UPDATE with your connection
+#define WIFISSID "KabelBox-A210"
+#define WIFIPASS ""
 
 #define PIN_CLK  0
 #define PIN_DATA 34
@@ -9,6 +15,7 @@ uint8_t BUFFER[READ_LEN] = {0};
 uint16_t oldx[160];
 uint16_t oldy[160];
 uint16_t *adcBuffer = NULL;
+HTTPClient http;  
 
 void i2sInit()
 {
@@ -37,28 +44,73 @@ void i2sInit()
 
 
 
-void mic_record_task (void* arg)
+void mic_record_task() //void* arg
 {   
-    
-  while(1){
+
     i2s_read_bytes(I2S_NUM_0, (char*) BUFFER, READ_LEN, (100 / portTICK_RATE_MS));
     adcBuffer = (uint16_t *)BUFFER;
     showSignal();
-    vTaskDelay(100 / portTICK_RATE_MS);
-  }
-
+    int signalLevel = 0;   
+    for ( int i = 0; i < READ_LEN; i++ ) {
+       signalLevel += adcBuffer[i];
+    }
+    signalLevel = (signalLevel/READ_LEN)/120;
+   Serial.print(signalLevel);Serial.println();
+ 
+   http.begin("http://192.168.0.75/device_request");    // Specify destination for HTTP request
+   http.addHeader("Content-Type", "application/json");  // Specify content-type headers
+   
+   // Replace this with your Light ID after making a mesh_info call:
+   http.addHeader("Mesh-Node-Mac", "3c71bf9d6ab4,3c71bf9d6980");
+   
+   String json = "{\"request\": \"set_status\",\"characteristics\": [{\"cid\": 1,\"value\": "+String(signalLevel)+"}]}";
+   int httpResponseCode = http.POST(json);
+     if(httpResponseCode>0){
+ 
+    String response = http.getString();                       //Get the response to the request
+ 
+    Serial.println(httpResponseCode);   //Print return code
+    //Serial.println(response);           //Print request answer
+ 
+   }else{
+    Serial.print("Error on sending POST: ");
+    Serial.println(httpResponseCode);
+   }
+ 
+   http.end(); 
+   http.end();
+   //vTaskDelay(100 / portTICK_RATE_MS);
 }
 
 void setup() {
+  Serial.begin(115200);
   M5.begin();
-   M5.Axp.ScreenBreath(7);
+  
+ // TODO: Get IP via mDNS from : esp32_mesh.local
+
+ 
+  M5.Lcd.println("Connect WIFI:");
+  M5.Lcd.println(WIFISSID);
+
+  WiFi.begin(WIFISSID, WIFIPASS); 
+  int count = 0;
+  while (WiFi.status() != WL_CONNECTED) { 
+    M5.Lcd.print(".");delay(100);
+    if (count>100) ESP.restart();
+    count++;
+  }
+ 
+  M5.Lcd.println("Connected to WiFi");delay(500);
+  
+  M5.Axp.ScreenBreath(8); // Brightness (min and visible 7 - 10 max)
   M5.Lcd.setRotation(3);
   M5.Lcd.fillScreen(WHITE);
   M5.Lcd.setTextColor(BLACK, WHITE);
   M5.Lcd.println("MIC");
 
   i2sInit();
-  xTaskCreatePinnedToCore(mic_record_task, "mic_record_task", 2048, NULL, 1, NULL, 1);
+  // We will do this in the loop :)
+  //xTaskCreatePinnedToCore(mic_record_task, "mic_record_task", 2048, NULL, 1, NULL, 1);
 }
 
 
@@ -75,5 +127,6 @@ void showSignal(){
 }
 
 void loop() {
-  
+  mic_record_task();
+  delay(100);
 }
