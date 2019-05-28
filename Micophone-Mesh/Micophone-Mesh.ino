@@ -3,14 +3,14 @@
 
 #define PIN_CLK  0
 #define PIN_DATA 34
-#define READ_LEN (1 * 1024)
+#define READ_LEN (1 * 100)
 uint8_t BUFFER[READ_LEN] = {0};
 
 uint16_t oldx[160];
 uint16_t oldy[160];
 uint16_t *adcBuffer = NULL;
 HTTPClient http;  
-
+uint16_t lastSignalLevel = 0;
 #include "setupConfig.h"
 
 void mic_record_task() //void* arg
@@ -23,9 +23,10 @@ void mic_record_task() //void* arg
     for ( int i = 0; i < READ_LEN; i++ ) {
        signalLevel += adcBuffer[i];
     }
-    signalLevel = ((signalLevel/READ_LEN)/100)-200;
-   Serial.print(signalLevel);Serial.println();
- 
+    signalLevel = ((signalLevel/READ_LEN)/100 -290)*3;
+    //Serial.print(signalLevel);Serial.println();
+    
+   if (signalLevel>0 && signalLevel<360 && signalLevel != lastSignalLevel) {
    http.begin("http://192.168.0.75/device_request");    // Specify destination for HTTP request
    http.addHeader("Content-Type", "application/json");  // Specify content-type headers
    
@@ -38,21 +39,22 @@ void mic_record_task() //void* arg
     if(httpResponseCode>0){
     String response = http.getString();                       //Get the response to the request
     //Serial.println(httpResponseCode);   //Print return code
-    //Serial.println(response);           //Print request answer
- 
-   }else{
-    Serial.print("Error on sending POST: ");
-    Serial.println(httpResponseCode);
+    //Serial.println(response);           //Print request answer 
+    M5.Lcd.fillScreen(WHITE);
+    M5.Lcd.setCursor(10, 10);
+    M5.Lcd.print(String(signalLevel));
+    lastSignalLevel = signalLevel;
    }
    http.end();
+   }
    // Let's focus first on sending the Light signal fast
-   //showSignal(); 
+   showSignal(); 
    //vTaskDelay(100 / portTICK_RATE_MS);
 }
 
 void showSignal(){
   int x, y;
-  for (int n = 0; n < 160; n++){
+  for (int n = 0; n < READ_LEN; n++){
     x = n;
     y = map(adcBuffer[n], 0, 65535, 10, 70);
     M5.Lcd.drawPixel(oldx[n], oldy[n],WHITE);
@@ -64,5 +66,5 @@ void showSignal(){
 
 void loop() {
   mic_record_task();
-  delay(10);
+  //delay(5);
 }
