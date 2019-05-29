@@ -1,6 +1,6 @@
 // UPDATE with your connection
 #define WIFISSID "KabelBox-A210"
-#define WIFIPASS ""
+#define WIFIPASS "14237187131701431551"
 
 #include <WiFi.h>
 #include <driver/i2s.h>
@@ -52,13 +52,11 @@ void setup() {
   M5.Lcd.println("Connected to WiFi");delay(500);
   
   M5.Axp.ScreenBreath(8); // Brightness (min and visible 7 - 10 max)
-  M5.Lcd.setRotation(3);
+  M5.Lcd.setRotation(1);
   M5.Lcd.fillScreen(WHITE);
   M5.Lcd.setTextColor(BLACK, WHITE);
-  M5.Lcd.println("MIC");
 
   i2sInit();
-  // We will do this in the loop :)
-  //xTaskCreatePinnedToCore(mic_record_task, "mic_record_task", 2048, NULL, 1, NULL, 1);
+  
 }
 
