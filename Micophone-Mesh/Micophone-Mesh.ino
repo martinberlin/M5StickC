@@ -29,7 +29,8 @@ void mic_record_task() //void* arg
    http.begin("http://192.168.0.75/device_request");    // Specify destination for HTTP request
    http.addHeader("Content-Type", "application/json");  // Specify content-type headers
    
-   // Replace this with your Light ID after making a mesh_info call:
+   // Replace this with your Light ID after making a mesh_info call
+   // curl -v http://esp32_mesh.local/mesh_info
    http.addHeader("Mesh-Node-Mac", "3c71bf9d6ab4,3c71bf9d6980");
    
    String json = "{\"request\": \"set_status\",\"characteristics\": [{\"cid\": 1,\"value\": "+String(signalLevel)+"}]}";
